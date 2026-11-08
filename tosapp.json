@@ -1,0 +1,90 @@
+{
+  "app_id": "delugedocker",
+  "title": "Deluge",
+  "image": "linuxserver/deluge:2.2.0-ls386",
+  "repo_name": "deluge",
+  "github_repo": "deluge",
+  "upstream_version": "2.2.0",
+  "version": "2.2.0-1",
+  "mode": "plain",
+  "icon_slug": "deluge",
+  "container_port": 8112,
+  "host_port": 8020,
+  "category": [
+    "Download"
+  ],
+  "user": "1000:1000",
+  "volumes": [
+    {
+      "host": "/Volume1/DockerAppData/delugedocker/config",
+      "container": "/config"
+    },
+    {
+      "host": "/Volume1/DockerAppData/delugedocker/downloads",
+      "container": "/downloads"
+    }
+  ],
+  "env": {
+    "TZ": "Asia/Shanghai",
+    "HOME": "/config",
+    "DELUGE_LOGLEVEL": "error"
+  },
+  "healthcheck": [
+    "CMD-SHELL",
+    "curl -s -o /dev/null http://127.0.0.1:8112/ || exit 1"
+  ],
+  "healthcheck_interval": "30s",
+  "healthcheck_timeout": "10s",
+  "healthcheck_retries": 3,
+  "healthcheck_start_period": "45s",
+  "auth": "linuxserver.io",
+  "upstream_url": "https://github.com/linuxserver/docker-deluge",
+  "upstream_license": "GPL-3.0-only",
+  "license": "GPL-3.0-only",
+  "official": "https://github.com/linuxserver/docker-deluge",
+  "help": "https://github.com/Moechz/deluge/issues",
+  "descript": "Deluge is a lightweight BitTorrent client with a full web interface. Add torrents, watch progress and manage seeds from any browser on your network while the daemon keeps running in the container. This package runs the official LinuxServer.io Deluge image as a non-root container; its configuration and downloaded files live in the application data folder. The default web password is deluge; change it on first login.",
+  "important": "Requires DockerEngine. The default web password is 'deluge' - change it immediately. Only the web port is published, so incoming peer connections rely on UPnP/NAT-PMP or router port forwarding; downloads still work with outgoing connections. Files are stored in DockerAppData/delugedocker (config and downloads) and are not shared with other apps. Back up the folder before uninstalling with data removal. The page is plain HTTP on the LAN.",
+  "release_note": "1. First release: Deluge 2.2.0 from Docker Hub, running as a non-root container; configuration and downloads live in the application data folder.",
+  "translations": {
+    "zh-cn": {
+      "descript": "Deluge 是轻量级 BitTorrent 客户端，带完整 Web 界面。可以在局域网内任意浏览器添加种子、查看进度和管理做种，守护进程持续在容器中运行。本应用运行 LinuxServer.io 官方镜像并以非 root 用户运行；配置和下载文件保存在应用数据目录。默认 Web 密码是 deluge，首次登录后请立即修改。",
+      "important": "需要 DockerEngine。默认 Web 密码为 deluge，请立即修改。本包只发布 Web 端口，入站连接依赖路由器 UPnP/NAT-PMP 或端口转发；出站连接仍可正常下载。文件在 DockerAppData/delugedocker（config 与 downloads），与其他应用不共享。卸载并删除数据前请备份。页面是局域网明文 HTTP。",
+      "release_note": "1. 首个版本：Deluge 2.2.0，来自 Docker Hub，以非 root 用户运行；配置与下载文件保存在应用数据目录。"
+    },
+    "zh-hk": {
+      "descript": "Deluge 是輕量級 BitTorrent 用戶端，帶完整 Web 介面。可以在區域網路內任意瀏覽器新增種子、查看進度和管理做種，守護程式持續在容器中執行。本應用執行 LinuxServer.io 官方鏡像並以非 root 使用者執行；設定和下載檔案儲存在應用程式資料目錄。預設 Web 密碼是 deluge，首次登入後請立即修改。",
+      "important": "需要 DockerEngine。預設 Web 密碼為 deluge，請立即修改。本包只發布 Web 連接埠，入站連線依賴路由器 UPnP/NAT-PMP 或連接埠轉送；出站連線仍可正常下載。檔案在 DockerAppData/delugedocker（config 與 downloads），與其他應用不共享。解除安裝並刪除資料前請備份。頁面是區域網路明文 HTTP。",
+      "release_note": "1. 首個版本：Deluge 2.2.0，來自 Docker Hub，以非 root 使用者執行；設定與下載檔案儲存在應用程式資料目錄。"
+    }
+  },
+  "data_notes": "`config` holds the daemon and web settings; `downloads` holds the torrent data. Copying `config` keeps the client configuration; the downloads folder is your own data.",
+  "design_notes": [
+    "**Runs as a non-root container.** Verified on real hardware as uid 1000.",
+    "**Two volumes.** `/config` keeps the daemon/web settings; `/downloads` receives the torrent data.",
+    "**Health check** probes the web UI on container port 8112.",
+    "**Fixed image tag, never `:latest`**, Docker Hub only, no `privileged`, no `network_mode: host`, no Docker socket, no `cap_add`."
+  ],
+  "limitations": [
+    "Only the web UI port is published. Incoming peer connections need UPnP/NAT-PMP or router port forwarding; outgoing connections still download.",
+    "`/downloads` belongs to this app only and is not shared with the Radarr/Sonarr/Lidarr packages.",
+    "No VPN is included. Use a VPN or a trusted network if your torrent traffic must be private.",
+    "The page is plain HTTP on the LAN; use a TLS reverse proxy before exposing it to the internet, and change the default password immediately.",
+    "Docker applications cannot be upgraded in place in the App Center: updating means uninstalling and reinstalling, which keeps the data folders."
+  ],
+  "runtime_files": [
+    {
+      "path": "config/auth",
+      "purpose": "daemon/web credentials and connection settings",
+      "created": "first start",
+      "growth": "small",
+      "lifecycle": "never overwritten; back it up"
+    }
+  ],
+  "platform": "x86_64",
+  "publisher": "Moechz",
+  "compose_project": "delugedocker",
+  "release_tag_prefix": "v",
+  "docker_socket": false,
+  "group_add": []
+}
