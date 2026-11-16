@@ -5,7 +5,7 @@
   "repo_name": "deluge",
   "github_repo": "deluge",
   "upstream_version": "2.2.0",
-  "version": "2.2.0-1",
+  "version": "2.2.0-2",
   "mode": "plain",
   "icon_slug": "deluge",
   "container_port": 8112,
