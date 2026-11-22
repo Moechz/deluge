@@ -1,11 +1,11 @@
 {
   "app_id": "delugedocker",
   "title": "Deluge",
-  "image": "linuxserver/deluge:2.2.0-ls386",
+  "image": "linuxserver/deluge:2.2.0-ls387",
   "repo_name": "deluge",
   "github_repo": "deluge",
   "upstream_version": "2.2.0",
-  "version": "2.2.0-2",
+  "version": "2.2.0-3",
   "mode": "plain",
   "icon_slug": "deluge",
   "container_port": 8112,
@@ -39,46 +39,91 @@
   "healthcheck_start_period": "45s",
   "auth": "linuxserver.io",
   "upstream_url": "https://github.com/linuxserver/docker-deluge",
-  "upstream_license": "GPL-3.0-only",
-  "license": "GPL-3.0-only",
+  "upstream_license": "GPL-3.0-or-later",
+  "license": "GPL-3.0-or-later",
   "official": "https://github.com/linuxserver/docker-deluge",
-  "help": "https://github.com/Moechz/deluge/issues",
-  "descript": "Deluge is a lightweight BitTorrent client with a full web interface. Add torrents, watch progress and manage seeds from any browser on your network while the daemon keeps running in the container. This package runs the official LinuxServer.io Deluge image as a non-root container; its configuration and downloaded files live in the application data folder. The default web password is deluge; change it on first login.",
-  "important": "Requires DockerEngine. The default web password is 'deluge' - change it immediately. Only the web port is published, so incoming peer connections rely on UPnP/NAT-PMP or router port forwarding; downloads still work with outgoing connections. Files are stored in DockerAppData/delugedocker (config and downloads) and are not shared with other apps. Back up the folder before uninstalling with data removal. The page is plain HTTP on the LAN.",
-  "release_note": "1. First release: Deluge 2.2.0 from Docker Hub, running as a non-root container; configuration and downloads live in the application data folder.",
+  "help": "https://github.com/Moechz/deluge/blob/main/PRIVACY.md",
+  "descript": "Deluge is a lightweight BitTorrent client with a full web interface. Add torrents, watch progress and manage seeds from any browser while the daemon keeps running in the container. It runs the official LinuxServer.io image as a non-root container; settings and downloads stay in the app data folder. No telemetry goes to the developer: only the trackers, DHT nodes and peers of the torrents you add see your IP. Web password is deluge; change it on first login.",
+  "important": "Requires DockerEngine. Default web password 'deluge' - change it immediately. Only the web port is published; peers reach you through UPnP/NAT-PMP or router forwarding, while outgoing connections still download. Your public IP is visible to the trackers, DHT nodes and peers of every torrent you add; no VPN is included. Data lives in DockerAppData/delugedocker (config, downloads). The page is plain HTTP on the LAN.",
+  "release_note": "2.2.0-3: rectified per review comments - privacy policy and listings now describe the real traffic (trackers, DHT, peer exchange, release check) and disclose the third-party endpoints; the licence is corrected to GPL-3.0-or-later with the OpenSSL exception and NOTICE rewritten; README and repository layout completed; base image bumped to linuxserver/deluge:2.2.0-ls387 for the CVE report; aarch64 package rebuilt and verified to declare platform=aarch64.",
   "translations": {
     "zh-cn": {
-      "descript": "Deluge 是轻量级 BitTorrent 客户端，带完整 Web 界面。可以在局域网内任意浏览器添加种子、查看进度和管理做种，守护进程持续在容器中运行。本应用运行 LinuxServer.io 官方镜像并以非 root 用户运行；配置和下载文件保存在应用数据目录。默认 Web 密码是 deluge，首次登录后请立即修改。",
-      "important": "需要 DockerEngine。默认 Web 密码为 deluge，请立即修改。本包只发布 Web 端口，入站连接依赖路由器 UPnP/NAT-PMP 或端口转发；出站连接仍可正常下载。文件在 DockerAppData/delugedocker（config 与 downloads），与其他应用不共享。卸载并删除数据前请备份。页面是局域网明文 HTTP。",
-      "release_note": "1. 首个版本：Deluge 2.2.0，来自 Docker Hub，以非 root 用户运行；配置与下载文件保存在应用数据目录。"
+      "descript": "Deluge 是轻量级 BitTorrent 客户端，带完整 Web 界面。可在任意浏览器添加种子、查看进度、管理做种，守护进程持续在容器内运行。本应用运行 LinuxServer.io 官方镜像并以非 root 用户运行，配置与下载文件保存在应用数据目录。开发者不收集任何遥测数据：只有你添加的任务对应的 tracker、DHT 节点和 peer 会看到你的公网 IP。默认 Web 密码为 deluge，首次登录后请立即修改。",
+      "important": "需要 DockerEngine。默认 Web 密码为 deluge，请立即修改。本包只发布 Web 端口，peer 入站依赖 UPnP/NAT-PMP 或路由器端口转发，出站连接仍可正常下载。你添加的每个任务都会把公网 IP 暴露给对应的 tracker、DHT 节点和 peer；本包不含 VPN。数据在 DockerAppData/delugedocker（config、downloads）。页面是局域网明文 HTTP。",
+      "release_note": "2.2.0-3：按审核意见整改——隐私声明与描述改为真实流量（tracker、DHT、peer 交换、版本检查）并补齐第三方端点表；许可更正为 GPL-3.0-or-later 及 OpenSSL 例外并重写 NOTICE；补全 README 与仓库目录；基础镜像升级到 linuxserver/deluge:2.2.0-ls387（对应 CVE 报告）；aarch64 包重新构建并核实 platform=aarch64。"
     },
     "zh-hk": {
-      "descript": "Deluge 是輕量級 BitTorrent 用戶端，帶完整 Web 介面。可以在區域網路內任意瀏覽器新增種子、查看進度和管理做種，守護程式持續在容器中執行。本應用執行 LinuxServer.io 官方鏡像並以非 root 使用者執行；設定和下載檔案儲存在應用程式資料目錄。預設 Web 密碼是 deluge，首次登入後請立即修改。",
-      "important": "需要 DockerEngine。預設 Web 密碼為 deluge，請立即修改。本包只發布 Web 連接埠，入站連線依賴路由器 UPnP/NAT-PMP 或連接埠轉送；出站連線仍可正常下載。檔案在 DockerAppData/delugedocker（config 與 downloads），與其他應用不共享。解除安裝並刪除資料前請備份。頁面是區域網路明文 HTTP。",
-      "release_note": "1. 首個版本：Deluge 2.2.0，來自 Docker Hub，以非 root 使用者執行；設定與下載檔案儲存在應用程式資料目錄。"
+      "descript": "Deluge 是輕量級 BitTorrent 用戶端，帶完整 Web 介面。可在任意瀏覽器新增種子、查看進度、管理做種，守護程式持續在容器內執行。本應用執行 LinuxServer.io 官方鏡像並以非 root 使用者執行，設定與下載檔案儲存在應用程式資料目錄。開發者不收集任何遙測資料：只有你新增的任務對應的 tracker、DHT 節點與 peer 會看到你的公網 IP。預設 Web 密碼為 deluge，首次登入後請立即修改。",
+      "important": "需要 DockerEngine。預設 Web 密碼為 deluge，請立即修改。本包只發布 Web 連接埠，peer 入站依賴 UPnP/NAT-PMP 或路由器連接埠轉送，出站連線仍可正常下載。你新增的每個任務都會把公網 IP 暴露給對應的 tracker、DHT 節點與 peer；本包不含 VPN。資料在 DockerAppData/delugedocker（config、downloads）。頁面是區域網路明文 HTTP。",
+      "release_note": "2.2.0-3：按審核意見整改——隱私聲明與描述改為真實流量（tracker、DHT、peer 交換、版本檢查）並補齊第三方端點表；許可更正為 GPL-3.0-or-later 及 OpenSSL 例外並重寫 NOTICE；補全 README 與倉庫目錄；基礎鏡像升級到 linuxserver/deluge:2.2.0-ls387（對應 CVE 報告）；aarch64 包重新建置並核實 platform=aarch64。"
     }
   },
-  "data_notes": "`config` holds the daemon and web settings; `downloads` holds the torrent data. Copying `config` keeps the client configuration; the downloads folder is your own data.",
+  "data_notes": "`config` holds the daemon and web settings (auth, core.conf, torrents.state, plugins); `downloads` holds the torrent payload and is the default save path. Copying `config` keeps the client configuration; `downloads` is your own data.",
   "design_notes": [
-    "**Runs as a non-root container.** Verified on real hardware as uid 1000.",
+    "**Runs as a non-root container.** uid/gid 1000, `cap_drop: [ALL]` and `no-new-privileges`; `CapEff=0000000000000000` measured inside the running container.",
     "**Two volumes.** `/config` keeps the daemon/web settings; `/downloads` receives the torrent data.",
-    "**Health check** probes the web UI on container port 8112.",
-    "**Fixed image tag, never `:latest`**, Docker Hub only, no `privileged`, no `network_mode: host`, no Docker socket, no `cap_add`."
+    "**Health check** probes the web UI on container port 8112 (curl ships with the image).",
+    "**Fixed image tag, never `:latest`**, Docker Hub only, no `privileged`, no `network_mode: host`, no Docker socket, no `cap_add`.",
+    "**No telemetry to the developer.** The only traffic is the BitTorrent traffic your own torrents generate, plus the daemon's optional release check (settings -> Other)."
   ],
   "limitations": [
     "Only the web UI port is published. Incoming peer connections need UPnP/NAT-PMP or router port forwarding; outgoing connections still download.",
-    "`/downloads` belongs to this app only and is not shared with the Radarr/Sonarr/Lidarr packages.",
-    "No VPN is included. Use a VPN or a trusted network if your torrent traffic must be private.",
-    "The page is plain HTTP on the LAN; use a TLS reverse proxy before exposing it to the internet, and change the default password immediately.",
+    "Adding a torrent announces it to that torrent's trackers and to the DHT, so your public IP, client port and up/download counters become visible to those third parties. LSD (local peer discovery) also broadcasts on the LAN. There is no anonymity layer of any kind.",
+    "No VPN is included. Pair it with a VPN tunnel or a trusted network if your torrent traffic must not be attributable to your line.",
+    "The page is plain HTTP on the LAN and ships with the upstream default password `deluge`; change it on first login and use a TLS reverse proxy before exposing the UI to the internet.",
+    "Optional outbound checks can be switched off: settings -> Other -> 'Check for new releases' (on by default, every 3 days) and 'Send anonymous stats' (off by default).",
+    "`/downloads` belongs to this app only and is not shared with other download/media packages; add the same path to them if you want a shared library.",
     "Docker applications cannot be upgraded in place in the App Center: updating means uninstalling and reinstalling, which keeps the data folders."
   ],
   "runtime_files": [
     {
       "path": "config/auth",
-      "purpose": "daemon/web credentials and connection settings",
+      "purpose": "web UI and daemon credentials (salted hash, never the plain password)",
+      "created": "first start",
+      "growth": "a few hundred bytes",
+      "lifecycle": "written when the password changes; back it up"
+    },
+    {
+      "path": "config/core.conf",
+      "purpose": "daemon preferences: listen ports, bandwidth limits, DHT/UPnP/encryption switches, proxy",
+      "created": "first start",
+      "growth": "< 10 KB",
+      "lifecycle": "rewritten on every settings change"
+    },
+    {
+      "path": "config/torrents.state, config/torrents.fastresume",
+      "purpose": "torrent list, labels/queue order and resume data for the torrents you add",
+      "created": "when the first torrent is added",
+      "growth": "grows with the number of torrents",
+      "lifecycle": "rewritten periodically; deleting it loses queue/resume state, not the payload"
+    },
+    {
+      "path": "config/hostlist.conf",
+      "purpose": "web UI allow-list for the reverse-proxy header",
       "created": "first start",
       "growth": "small",
-      "lifecycle": "never overwritten; back it up"
+      "lifecycle": "rewritten when the allow-list changes"
+    },
+    {
+      "path": "config/plugins/",
+      "purpose": "configuration and state of the plugins you enable",
+      "created": "when a plugin is enabled",
+      "growth": "small",
+      "lifecycle": "persistent"
+    },
+    {
+      "path": "config/deluged.log",
+      "purpose": "daemon log (level set by DELUGE_LOGLEVEL=error)",
+      "created": "first start",
+      "growth": "bounded by the log level",
+      "lifecycle": "appended; safe to delete"
+    },
+    {
+      "path": "downloads/",
+      "purpose": "the torrent payload and the default save path",
+      "created": "when a torrent writes data",
+      "growth": "bounded by what you download",
+      "lifecycle": "yours; kept on uninstall unless you ask to delete data"
     }
   ],
   "platform": "x86_64",

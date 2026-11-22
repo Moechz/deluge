@@ -1,166 +1,219 @@
 # deluge-for-tos
 
 > TerraMaster TOS 7 App Center — **Docker application** package for
-> [Deluge](https://github.com/linuxserver/docker-deluge).
+> [Deluge](https://github.com/deluge-torrent/deluge) 2.2.0, run from the
+> unmodified [LinuxServer.io image](https://github.com/linuxserver/docker-deluge).
 
-## What this is
+Current packaging version: **`2.2.0-3`** (remediated per App Listing Review, see
+[§9](#9-review-remediation-220-3)).
 
-A four-file TOS Docker application archive (`delugedocker.tar.gz`) that installs
-Deluge on TOS 7 through the App Center:
+## 1. What this is
 
-- `config.ini` — TOS application metadata (`application_type: docker`, id `delugedocker`)
-- `delugedocker.lang` — 23-language superset (TOS requires 14)
-- `delugedocker.svg` — application icon (678 bytes, 2 SVG elements)
-- `docker-compose.yml` — one service, image `linuxserver/deluge:2.2.0-ls386`
+A four-file TOS Docker application archive that installs Deluge on TOS 7 through the App
+Center:
 
-## How it works
+| File | Role |
+|---|---|
+| `config.ini` | TOS application metadata (`application_type: docker`, id `delugedocker`, `path` → port 8020, `help` → this repo's privacy policy) |
+| `delugedocker.lang` | 23-language metadata superset (TOS requires 14) |
+| `delugedocker.svg` | application icon (744 bytes, 4 SVG elements, 512×512 viewBox) |
+| `docker-compose.yml` | one service running `linuxserver/deluge:2.2.0-ls387`, non-root, hardened, port `8020:8112` |
+
+The archive contains no binaries and no upstream source code: the container image is pulled
+from Docker Hub at install time.
+
+## 2. Repository layout
+
+```text
+.
+├── README.md                     this file
+├── PRIVACY.md                    privacy policy + third-party endpoint disclosure
+├── NOTICE.md                     licences, image digests, trademarks, attributions
+├── CHANGELOG.md                  per-version changes, mapped to review codes
+├── LICENSE                       MIT licence of *this packaging* (not of Deluge)
+├── tosapp.json                   packaging spec read by scripts/ and tools/
+├── TOSAppSelfTestingTool         official TOS package checker (binary, run with -c)
+├── src/                          the four files that go into the archive
+│   ├── config.ini
+│   ├── delugedocker.lang
+│   ├── delugedocker.svg
+│   └── docker-compose.yml
+├── scripts/
+│   ├── build.sh                  build one architecture → out/<appid>.tar.gz
+│   └── build-dual.sh             build x86_64 + aarch64, verify both, write .sha256
+├── tools/
+│   └── verify.py                 review-standards self-check (hard build gate)
+└── test/
+    └── install-and-verify.sh     on-device E2E (needs root; not needed for review)
+```
+
+`build/`, `out/` and `test/compose-resolved/` are generated and git-ignored; the released
+artefacts live in GitHub Releases, not in the tree.
+
+## 3. How it works
 
 | | |
 |---|---|
-| Container image | `linuxserver/deluge:2.2.0-ls386` (Docker Hub, used unmodified) |
-| Open | `http://<NAS-IP>:8020/` (container port 8112) |
-| Runs as | non-root, `user: "1000:1000"` |
-| Persistent data | `/config` → `/Volume1/DockerAppData/delugedocker/config`, `/downloads` → `/Volume1/DockerAppData/delugedocker/downloads` |
-| Logs | `docker logs delugedocker` (stdout/stderr) |
+| Container image | `linuxserver/deluge:2.2.0-ls387` (Docker Hub, unmodified, tag pinned) |
+| Image index digest | `sha256:e2a537991884a514b64d7adf857e39b5e9239a1c76e52114e52bf10707dde772` (amd64 + arm64) |
+| Open | `http://<NAS-IP>:8020/` → container port 8112 |
+| Runs as | uid/gid `1000:1000`, `cap_drop: [ALL]`, `no-new-privileges`, `CapEff=0` |
+| Persistent data | `/config` → `/Volume1/DockerAppData/delugedocker/config`<br>`/downloads` → `/Volume1/DockerAppData/delugedocker/downloads` |
+| Health check | `curl -s -o /dev/null http://127.0.0.1:8112/` every 30 s (curl ships in the image) |
+| Logs | `docker logs delugedocker` (level from `DELUGE_LOGLEVEL=error`) |
+| Default password | `deluge` — change it on first login |
 
-`config` holds the daemon and web settings; `downloads` holds the torrent data. Copying `config` keeps the client configuration; the downloads folder is your own data.
+## 4. Ports
 
-## Privacy
-
-This application runs entirely on your NAS. **The developer does not collect, receive or
-have access to any data processed by the application.** There is no telemetry, no analytics
-and no account.
-
-| Topic | Detail |
-|---|---|
-| Data processed | The application's configuration, database, caches and logs, plus any files you create with it. |
-| Where it is stored | The application data folder (`/Volume1/DockerAppData/delugedocker/`) on your NAS. Nothing is uploaded to the developer. |
-| Retention period | Until **you** delete it. Logs are rotated or size-limited by the application; uninstalling keeps the data unless you tick “delete data”. |
-| Your rights | **Access / export**: copy the data folder. **Correct**: change the values in the web UI. **Delete**: uninstall with “delete data”, or remove the folder after stopping the container. |
-| Deletion channel | Delete the folder yourself, or email **moechz@163.com** (answered within 30 days). |
-| Security measures | Container runs as uid 1000 (never root), no `privileged`, no host network, no `cap_add`, no Docker socket, one published port; image tag pinned and refreshed on upstream fixes. |
-| Children | Not directed at children. |
-
-**Full privacy policy:** [PRIVACY.md](PRIVACY.md) —
-<https://github.com/Moechz/deluge/blob/main/PRIVACY.md> — and the website version at
-<https://www.moechz.com/privacy.html>.
-
-## Third-party services (API disclosure)
-
-The developer operates no server in this path. The application contacts only the services
-**you configure**, plus (optionally) an update check and the image registry.
-
-| Service | Endpoint | Data sent | Destination / region |
-|---|---|---|---|
-| Services you configure in the app | the address you enter | only the data that feature needs | normally your own LAN or the provider you chose |
-| Update check (if enabled) | the upstream project's release feed | current version string | GitHub, US |
-| Image pull | `registry-1.docker.io` or your registry mirror | anonymous pull | Docker Hub, US / your mirror |
-
-See `PRIVACY.md` §6 for the full table. Disable any integration in the app's settings if you
-do not want it.
-
-## Licence and attributions
-
-| Component | Licence | Notes |
+| Direction | Port | Notes |
 |---|---|---|
-| Deluge | GPL-3.0-only | upstream application, used unmodified inside the image |
-| Container image `linuxserver/deluge:2.2.0-ls386` | see the image's own metadata | pulled from Docker Hub at install time |
-| This packaging | GPL-3.0 (see `LICENSE`) | compose file, metadata, translations, icon |
+| Web UI (published) | host `8020` → container `8112/tcp` | the only published port; unchanged since `2.2.0-1` |
+| BitTorrent listen (not published) | container `6881–6891` (random) | inbound peers arrive through UPnP/NAT-PMP or a router forward; outgoing connections work regardless |
+| Daemon RPC (not published) | container `58846/tcp` | used only inside the container |
 
-“Deluge”, “TerraMaster” and “TOS” are trademarks of their respective owners. This is an
-independent community package by Moechz and is not affiliated with the upstream project or
-TerraMaster. Full details: [NOTICE.md](NOTICE.md).
+The host port stays inside TOS' recommended `8000–19999` range and avoids the reserved ports
+(22/80/443/445/3306/5050/5432/6379/8181/8443).
 
-## Design highlights
+## 5. Data, backup and uninstall
 
-- **Non-root.** `user: "1000:1000"`; verified on real hardware (the container reports uid 1000).
-- **Fixed image tag, never `:latest`**, Docker Hub only, no `privileged`, no `network_mode: host`, and no Docker socket, no `cap_add`.
-- **Health check** probing the service on container port 8112.
-- **Deterministic build**: GNU tar with uid/gid 0 and zeroed timestamps, gzip without a timestamp, plus the review-standards self-check above.
-- **Runs as a non-root container.** Verified on real hardware as uid 1000.
-- **Two volumes.** `/config` keeps the daemon/web settings; `/downloads` receives the torrent data.
-- **Health check** probes the web UI on container port 8112.
-- **Fixed image tag, never `:latest`**, Docker Hub only, no `privileged`, no `network_mode: host`, no Docker socket, no `cap_add`.
+| Path | Content |
+|---|---|
+| `config/auth` | web/daemon credentials (salted hash) |
+| `config/core.conf` | preferences: listen ports, limits, DHT/UPnP/encryption switches, proxy |
+| `config/torrents.state`, `config/torrents.fastresume` | torrent list, queue and resume data |
+| `config/hostlist.conf` | web UI allow-list |
+| `config/plugins/` | state of enabled plugins |
+| `config/deluged.log` | daemon log |
+| `downloads/` | the torrent payload (default save path) |
 
-## Runtime file manifest
+- **Backup:** copy `/Volume1/DockerAppData/delugedocker/`. `config` alone is enough to keep the
+  client setup; `downloads` is your own data.
+- **Uninstall:** uninstalling from the App Center keeps both folders. Tick “delete data” (or
+  stop the container and remove the folder) to delete everything.
+- **Upgrade:** Docker apps cannot be upgraded in place — uninstall and reinstall; the data
+  folders survive.
 
-Everything the application writes on the NAS lives inside its own data
-directory; the container-internal `/tmp` is discarded with the container. The
-table lists what is created and how it behaves. Nothing else is written.
+## 6. Privacy
 
-| Path | Purpose | Created when | Growth bound | Lifecycle |
-|---|---|---|---|---|
-| `config/auth` | daemon/web credentials and connection settings | first start | small | never overwritten; back it up |
-| `/Volume1/DockerAppData/delugedocker/config` | Deluge application data (everything the container writes outside /tmp) | on first start / on demand | bounded by your own data | persistent; kept on uninstall unless you ask to delete it |
-| `/Volume1/DockerAppData/delugedocker/downloads` | Deluge application data (everything the container writes outside /tmp) | on first start / on demand | bounded by your own data | persistent; kept on uninstall unless you ask to delete it |
+The developer receives **nothing**: no telemetry, no analytics, no crash reporting, no
+account. All data stays in `/Volume1/DockerAppData/delugedocker/`.
 
-## Architectures
+The app *does* talk to the internet, because that is what a BitTorrent client does: the
+trackers named in your torrents, the DHT, and the peers — plus two upstream checks. Your
+public IP is visible to those third parties for every torrent you add. Full details, the
+complete endpoint table and the opt-out switches are in **[PRIVACY.md](PRIVACY.md)**.
 
-The TOS store takes one package per architecture. This release provides both,
-built from the same sources by `scripts/build-dual.sh`:
+## 7. Third-party endpoints (summary)
+
+| # | Endpoint | Sent | When |
+|---|---|---|---|
+| 1 | trackers inside your torrent/magnet | infohash, peer id, IP:port, counters | every announce |
+| 2 | DHT — bootstrap `dht.libtorrent.org:25401`, then other nodes | infohash, IP:port | while a torrent is active (default on) |
+| 3 | peers / PEX (TCP+UDP) | IP:port, client version, piece map | while transferring (default on) |
+| 4 | LSD (LAN multicast `239.192.x.x:6771`, SSDP `:1900`) | infohash, LAN IP | on the LAN only |
+| 5 | `https://ftp.osuosl.org/pub/deluge/version-2.0` | IP + user agent | at start, then every 3 days (default **on**) |
+| 6 | `http://deluge-torrent.org/stats_get.php?…` | arch, python/deluge version | weekly, only if “send anonymous stats” is enabled (default **off**) |
+| 7 | `https://deluge-torrent.org/test_port.php?port=…` | listen port | only when you press “Test active port” |
+| 8 | `registry-1.docker.io` (or your mirror) | anonymous pull | install/update |
+
+The developer operates none of these. See [PRIVACY.md](PRIVACY.md) §6 for data, region and
+how to switch each one off.
+
+## 8. Notices and licences
+
+| Component | Licence |
+|---|---|
+| Deluge 2.2.0 (inside the image) | **GPL-3.0-or-later with the OpenSSL linking exception** — verified from the image's `deluge-2.2.0.dist-info/METADATA` (`GPLv3+`) and `LICENSE` |
+| Image `linuxserver/deluge:2.2.0-ls387` | LinuxServer.io build, GPL-3.0; the image label says `GPL-3.0-only` (see NOTICE §1) |
+| This packaging (compose, metadata, translations, docs, scripts) | **MIT** (see `LICENSE`) — no upstream code is included |
+
+“Deluge”, “LinuxServer.io”, “TerraMaster” and “TOS” are trademarks of their respective
+owners and are used descriptively only. This is an independent community package by Moechz; it
+is not affiliated with or endorsed by the Deluge project, LinuxServer.io or TerraMaster.
+Full attributions, image digests and the licence-correction note: **[NOTICE.md](NOTICE.md)**.
+
+## 9. Review remediation (`2.2.0-3`)
+
+Review of `2.2.0-2` (x86_64 + aarch64) raised the union of `C10 C2 C6 C8 T1` plus the
+blocking rows printed in the aarch64 notice. What changed:
+
+| Finding | Fix in `2.2.0-3` |
+|---|---|
+| **C6** data collection inconsistent with the declaration | `PRIVACY.md` rewritten around the *actual* traffic of a BitTorrent client; the previous text described indexers/download clients and a GitHub update check that the app never performs. Release check (`ftp.osuosl.org`), opt-in anonymous stats (`deluge-torrent.org`), port test, DHT/PEX/LSD/UPnP are now disclosed. Store description, `important`, `release_note` and all 23 language strings rewritten to match. |
+| **C8** third-party APIs not disclosed | Endpoint table (endpoint → data → destination/region) in `PRIVACY.md` §6 and README §7, including the **outbound tracker/DHT/peer traffic with public-IP exposure** caused by the torrents the user adds. |
+| **C2** intellectual property | Licence corrected to **GPL-3.0-or-later + OpenSSL exception** (was `GPL-3.0-only`, copied from an image label); `NOTICE.md` rewritten with source links, image index + per-arch digests, trademark attribution, packaging licence and a GPL source-availability section. |
+| **C10** repository/directory compliance | README rewritten with Repository layout / How it works / Ports / Data & uninstall / Privacy / Notices / Build / Architectures / Remediation; `help` in `config.ini` and `tosapp.json` now points at `blob/main/PRIVACY.md`. |
+| **T1** high/critical CVE | Image bumped `2.2.0-ls386` → **`2.2.0-ls387`** (newest LinuxServer.io build, 2026-11-09). Upstream Deluge 2.2.0 is still the latest release, so no newer application version exists. |
+| **V1** runs as root (aarch64 notice) | Package already pinned `user: "1000:1000"`; this release additionally drops **all** capabilities and sets `no-new-privileges`. Measured in the running container: `id` → uid 1000, `CapEff=0000000000000000`, no root process in `ps`. |
+| **F1 / V10** install failed, architecture mismatch (aarch64 notice) | Could not be reproduced from the published `2.2.0-2` artefact (that aarch64 archive already declared `platform=aarch64` and the image is a multi-arch OCI index). Mitigated anyway: the aarch64 archive is rebuilt and re-verified (`config.ini platform == aarch64`), the image was bumped to ls387, and submission now uses the per-arch release asset `delugedocker_aarch64.tar.gz` rather than any generic fallback. |
+| **V5 / V7 / V12 / V4** rows in the aarch64 notice | Checked and not applicable / verified: `delugedocker` is already a unique app id on the platform (no duplicate exists), the submitted SHA-256 is verified against the platform `file_hash` after submission, and the archive contains no executable, no obfuscated content and no third-party code (four text/metadata files only). |
+
+## 10. Build and verification
+
+```bash
+# both architectures -> out/delugedocker_{x86_64,aarch64}.tar.gz + .sha256
+scripts/build-dual.sh 2.2.0-3
+
+# single architecture
+scripts/build.sh 2.2.0-3 x86_64
+```
+
+`scripts/build.sh` stages the four files, substitutes `@@VERSION@@`/`@@PLATFORM@@`, strips
+CRLF/BOM/AppleDouble, runs `tools/verify.py` as a hard gate (archive layout, JSON validity,
+required fields, 14+ languages, version consistency, Docker-Hub-only image, fixed tag,
+reserved/recommended ports, non-root user, per-service healthcheck/TZ/restart, data paths below
+the application data root, no `/Volume*` wildcard, comment-free sequence blocks, `x-app-meta`
+position, no literal secrets, icon limits), then packs with GNU tar (uid/gid 0, mtime 0) and
+gzip (no timestamp) so the archive is reproducible.
+
+Official check (both archives must report a pass):
+
+```bash
+./TOSAppSelfTestingTool -c out/delugedocker_x86_64.tar.gz
+./TOSAppSelfTestingTool -c out/delugedocker_aarch64.tar.gz
+```
+
+Isolated runtime check (temporary ports, `/tmp` data, never the production folder):
+
+```bash
+python3 ../stage.py . --timeout 300     # isolated compose up + HTTP + non-root assertions
+```
+
+## 11. Architectures and checksums (`2.2.0-3`)
 
 | Architecture | Package | Size | SHA-256 |
 |---|---|---|---|
-| x86_64 | `delugedocker_x86_64.tar.gz` | 4208 B | `f49035bd6ac2c4cc12951a17240febc1fa3fe88bb6f93c99c022e37bab8177f8` |
-| aarch64 | `delugedocker_aarch64.tar.gz` | 4208 B | `e63da03bd4f6345fcc5e69e499dd17c628ef42198c3031b09534ff85da435db7` |
+| x86_64 | `delugedocker_x86_64.tar.gz` | 5408 B | `e54da649189c1f9b01d4e631c68e9f9a0c78192e4285c33a73d572f40457e0e6` |
+| aarch64 | `delugedocker_aarch64.tar.gz` | 5404 B | `37d2a0164da056a1f05c704dd78b67daa3f4c281fb3732d8dacd22bafd2ea0ce` |
 
-The x86_64 package was verified with the full on-device E2E; the aarch64 package
-passes the official `TOSAppSelfTestingTool -c` check and the developer platform's
-automated validation (no ARM host was available for a container E2E).
+Both archives were built from the same sources by `scripts/build-dual.sh` and pass the official
+`TOSAppSelfTestingTool -c` check. x86_64 was additionally started in an isolated staging
+project (container healthy, HTTP 200, uid 1000). **No ARM host was available**, so the aarch64
+archive is verified statically (declared `platform=aarch64`, image provides
+`linux/arm64` manifest `sha256:2a63fea7…`) rather than by running it.
 
-## Build
+## 12. Security notes
 
-```bash
-scripts/build.sh                  # -> out/delugedocker.tar.gz + .sha256
-scripts/build.sh 2.2.0-2   # packaging iteration bump
-scripts/build.sh 2.2.0-1 aarch64
-```
+- Non-root, all capabilities dropped, `no-new-privileges`; no `privileged`, no host network,
+  no Docker socket, no `cap_add`, no `group_add`.
+- One published port (8020). The web UI is plain HTTP and ships with the upstream password
+  `deluge` — change it, and put a TLS reverse proxy in front before exposing it.
+- BitTorrent traffic is **not** anonymised. Use a VPN or a trusted network if that matters to
+  you; the package intentionally does not bundle one.
+- The image tag is pinned; this package is rebuilt when upstream ships security fixes.
 
-The build stages the four files, substitutes the version/platform placeholders,
-removes CRLF/BOM/AppleDouble, then runs
-`tools/verify.py`, a review-standards self-check (archive layout, JSON validity,
-required fields, 14+ language coverage, version consistency, Docker-Hub-only
-images, fixed tag, reserved/recommended host ports, non-root user, per-service
-healthcheck/TZ/restart, data path below the application data root, never the
-`/Volume*` wildcard, comment-free sequence blocks, `x-app-meta` position, no
-literal secrets and the SVG size/element limits).
+## 13. Store submission
 
-## Local verification
+1. Public GitHub repo (this tree) with tag `v2.2.0-3`.
+2. Release assets: `delugedocker_x86_64.tar.gz`, `delugedocker_aarch64.tar.gz` and both
+   `.sha256` files.
+3. Developer platform → Deluge → new version `2.2.0-3` for **x86_64 and aarch64**; submission
+   remarks: “Rectified per review comments”.
+4. After submission, compare the platform `file_hash` with the local `sha256sum` (V7/S12).
 
-```bash
-./TOSAppSelfTestingTool -c out/delugedocker.tar.gz   # official spec check
-bash test/install-and-verify.sh                  # on-device E2E (needs root)
-```
-
-> Docker applications cannot be side-loaded through the App Center's manual
-> install page (it accepts `.deb` only); the official self-testing tool's `-i`
-> mode or `docker compose` are the only ways to install one for testing.
-
-## Store submission checklist
-
-1. Public GitHub repo (code + README only).
-2. Release **tag `v2.2.0-1`**, assets `delugedocker.tar.gz` +
-   `delugedocker.tar.gz.sha256` (Docker asset naming: `<app_id>.tar.gz`, **no
-   platform suffix**).
-3. Developer platform → Add Application: ID `delugedocker`, package type Docker,
-   repository URL, architecture `x86_64`.
-4. Version Management → Add Version `2.2.0-1` → automated validation → review.
-
-
-## Limitations
-
-Only the web UI port is published. Incoming peer connections need UPnP/NAT-PMP or router port forwarding; outgoing connections still download.
-`/downloads` belongs to this app only and is not shared with the Radarr/Sonarr/Lidarr packages.
-No VPN is included. Use a VPN or a trusted network if your torrent traffic must be private.
-The page is plain HTTP on the LAN; use a TLS reverse proxy before exposing it to the internet, and change the default password immediately.
-Docker applications cannot be upgraded in place in the App Center: updating means uninstalling and reinstalling, which keeps the data folders.
-
----
-
-Packaged for TOS 7 by Moechz. Upstream image used unmodified from Docker Hub.
-
-## Support
+## 14. Support
 
 - Issues and questions: <https://github.com/Moechz/deluge/issues>
 - Email: moechz@163.com
-- Privacy: [PRIVACY.md](PRIVACY.md) · Licence: [NOTICE.md](NOTICE.md)
+- Privacy: [PRIVACY.md](PRIVACY.md) · Licences/attributions: [NOTICE.md](NOTICE.md) ·
+  Changes: [CHANGELOG.md](CHANGELOG.md)

@@ -1,12 +1,18 @@
 # ===========================================================================
 # Deluge for TerraMaster TOS 7 (Docker application)
 # ===========================================================================
-# Upstream image : linuxserver/deluge:2.2.0-ls386 (Docker Hub, used unmodified)
+# Upstream image : linuxserver/deluge:2.2.0-ls387 (Docker Hub, used unmodified)
 #                  -> https://github.com/linuxserver/docker-deluge
+#                  OCI index sha256:e2a537991884a514b64d7adf857e39b5e9239a1c76e52114e52bf10707dde772
+#                  platforms: linux/amd64 + linux/arm64
+#                  (ls386, shipped in 2.2.0-2, is superseded by ls387: the base
+#                   rebuild that answers finding T1)
 #
 # Ports   : host 8020 -> container 8112. The host port is in the
 #           TOS-recommended 8000-19999 range and is not one of the reserved
-#           ports (22/80/443/445/3306/5050/5432/6379/8181/8443).
+#           ports (22/80/443/445/3306/5050/5432/6379/8181/8443). The port is
+#           unchanged since the first release (RUNBOOK §12: never republish
+#           on a different port).
 # Volumes : all persistent data lives below
 #           /Volume1/DockerAppData/delugedocker/. The /Volume* wildcard is
 #           deliberately NOT used: the platform does not expand it.
@@ -15,6 +21,11 @@
 #           non-root user, no privileged mode, no network_mode: host, no
 #           cap_add, explicit TZ, a healthcheck on the only service, and
 #           x-app-meta as the last block.
+# Hardening: uid/gid 1000 with every Linux capability dropped (CapEff =
+#           0000000000000000, measured inside the running container) plus
+#           no-new-privileges, so a setuid helper inside the image cannot
+#           regain root either. Deluge needs no capability: it writes only
+#           /config and /downloads and does TCP/UDP as an unprivileged user.
 # Escaping: docker compose interpolates ${VAR}/$VAR in compose files, so any
 #           '$' meant for the shell is written '$$'.
 #
@@ -26,7 +37,7 @@
 
 services:
   delugedocker:
-    image: linuxserver/deluge:2.2.0-ls386
+    image: linuxserver/deluge:2.2.0-ls387
     container_name: delugedocker
     restart: unless-stopped
     user: "1000:1000"
@@ -36,6 +47,10 @@ services:
       TZ: "Asia/Shanghai"
       HOME: "/config"
       DELUGE_LOGLEVEL: "error"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - /Volume1/DockerAppData/delugedocker/config:/config
       - /Volume1/DockerAppData/delugedocker/downloads:/downloads
