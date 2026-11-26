@@ -1,11 +1,11 @@
 {
   "app_id": "delugedocker",
   "title": "Deluge",
-  "image": "linuxserver/deluge:2.2.0-ls387",
+  "image": "linuxserver/deluge:2.2.0-ls388@sha256:52314116ba684ae5cdcbd380758be2a5f7cc866b4235f44ba7af8ff7c35c42b7",
   "repo_name": "deluge",
   "github_repo": "deluge",
   "upstream_version": "2.2.0",
-  "version": "2.2.0-3",
+  "version": "2.2.0-4",
   "mode": "plain",
   "icon_slug": "deluge",
   "container_port": 8112,
@@ -42,32 +42,33 @@
   "upstream_license": "GPL-3.0-or-later",
   "license": "GPL-3.0-or-later",
   "official": "https://github.com/linuxserver/docker-deluge",
-  "help": "https://github.com/Moechz/deluge/blob/main/PRIVACY.md",
-  "descript": "Deluge is a lightweight BitTorrent client with a full web interface. Add torrents, watch progress and manage seeds from any browser while the daemon keeps running in the container. It runs the official LinuxServer.io image as a non-root container; settings and downloads stay in the app data folder. No telemetry goes to the developer: only the trackers, DHT nodes and peers of the torrents you add see your IP. Web password is deluge; change it on first login.",
-  "important": "Requires DockerEngine. Default web password 'deluge' - change it immediately. Only the web port is published; peers reach you through UPnP/NAT-PMP or router forwarding, while outgoing connections still download. Your public IP is visible to the trackers, DHT nodes and peers of every torrent you add; no VPN is included. Data lives in DockerAppData/delugedocker (config, downloads). The page is plain HTTP on the LAN.",
-  "release_note": "2.2.0-3: rectified per review comments - privacy policy and listings now describe the real traffic (trackers, DHT, peer exchange, release check) and disclose the third-party endpoints; the licence is corrected to GPL-3.0-or-later with the OpenSSL exception and NOTICE rewritten; README and repository layout completed; base image bumped to linuxserver/deluge:2.2.0-ls387 for the CVE report; aarch64 package rebuilt and verified to declare platform=aarch64.",
+  "help": "https://moechz.github.io/deluge/",
+  "descript": "Deluge is a BitTorrent client. Its daemon runs in the container and is driven from the Deluge Web UI on port 8020. Sign in with the default password deluge, then change it. The Web UI adds torrent files, magnet links and URLs, shows download and seeding progress and sets speed limits. Settings and resume data stay in DockerAppData/delugedocker/config, the payload in downloads. Only the Web UI port is published, so incoming peers need a forwarded port on the router. No telemetry is sent to the developer.",
+  "important": "Default Web UI password is deluge, change it on first login. Only port 8020 (Web UI) is published. Incoming peer connections need a listen port forwarded on the router, outgoing connections work without it. Your public IP is sent to the trackers, DHT nodes and peers of every torrent you add and no VPN is included. Data lives in DockerAppData/delugedocker. The page is plain HTTP on the LAN, so use a TLS reverse proxy before exposing it to the internet.",
+  "release_note": "2.2.0-4: rectified per review comments. F2 fixed: /run is pre-mounted as a tmpfs owned by uid 1000, so s6-overlay no longer aborts with exit code 100 before Deluge starts. C9 fixed: app.lang no longer uses ASCII semicolons, which the store parser treated as a comment and cut the description, and the text describes only delivered features. P2 fixed: help points to a rendered help page. S11 fixed: umask 027 and owner-only /config. T1 fixed: image bumped to ls388.",
   "translations": {
     "zh-cn": {
-      "descript": "Deluge 是轻量级 BitTorrent 客户端，带完整 Web 界面。可在任意浏览器添加种子、查看进度、管理做种，守护进程持续在容器内运行。本应用运行 LinuxServer.io 官方镜像并以非 root 用户运行，配置与下载文件保存在应用数据目录。开发者不收集任何遥测数据：只有你添加的任务对应的 tracker、DHT 节点和 peer 会看到你的公网 IP。默认 Web 密码为 deluge，首次登录后请立即修改。",
-      "important": "需要 DockerEngine。默认 Web 密码为 deluge，请立即修改。本包只发布 Web 端口，peer 入站依赖 UPnP/NAT-PMP 或路由器端口转发，出站连接仍可正常下载。你添加的每个任务都会把公网 IP 暴露给对应的 tracker、DHT 节点和 peer；本包不含 VPN。数据在 DockerAppData/delugedocker（config、downloads）。页面是局域网明文 HTTP。",
-      "release_note": "2.2.0-3：按审核意见整改——隐私声明与描述改为真实流量（tracker、DHT、peer 交换、版本检查）并补齐第三方端点表；许可更正为 GPL-3.0-or-later 及 OpenSSL 例外并重写 NOTICE；补全 README 与仓库目录；基础镜像升级到 linuxserver/deluge:2.2.0-ls387（对应 CVE 报告）；aarch64 包重新构建并核实 platform=aarch64。"
+      "descript": "Deluge 是 BitTorrent 客户端，守护进程在容器内运行，通过 8020 端口的 Deluge Web 界面操作。默认密码为 deluge，请首次登录后立即修改。在 Web 界面可添加种子文件、磁力链与下载地址，查看下载与做种进度并设置限速。配置与断点续传数据保存在 DockerAppData/delugedocker/config，下载内容保存在 downloads。应用只发布 Web 端口，入站 peer 需要在路由器上转发端口。开发者不收集任何遥测数据。",
+      "important": "默认 Web 密码为 deluge，请首次登录后立即修改。本包只发布 8020 端口（Web 界面）。入站 peer 连接需要在路由器上转发监听端口，出站连接不受影响。你添加的每个任务都会把公网 IP 暴露给对应的 tracker、DHT 节点与 peer，本包不含 VPN。数据位于 DockerAppData/delugedocker。页面是局域网明文 HTTP，暴露到公网前请使用 TLS 反向代理。",
+      "release_note": "2.2.0-4：按审核意见整改。F2 修复：/run 预挂载为 uid 1000 的 tmpfs，s6-overlay 不再以退出码 100 中断启动。C9 修复：lang 不再使用 ASCII 分号（商店解析器会当作注释截断描述），文案只描述真实交付的功能。P2 修复：help 指向可渲染的帮助页。S11 修复：umask 027 且 /config 仅属主可读。T1 修复：基础镜像升级到 ls388。"
     },
     "zh-hk": {
-      "descript": "Deluge 是輕量級 BitTorrent 用戶端，帶完整 Web 介面。可在任意瀏覽器新增種子、查看進度、管理做種，守護程式持續在容器內執行。本應用執行 LinuxServer.io 官方鏡像並以非 root 使用者執行，設定與下載檔案儲存在應用程式資料目錄。開發者不收集任何遙測資料：只有你新增的任務對應的 tracker、DHT 節點與 peer 會看到你的公網 IP。預設 Web 密碼為 deluge，首次登入後請立即修改。",
-      "important": "需要 DockerEngine。預設 Web 密碼為 deluge，請立即修改。本包只發布 Web 連接埠，peer 入站依賴 UPnP/NAT-PMP 或路由器連接埠轉送，出站連線仍可正常下載。你新增的每個任務都會把公網 IP 暴露給對應的 tracker、DHT 節點與 peer；本包不含 VPN。資料在 DockerAppData/delugedocker（config、downloads）。頁面是區域網路明文 HTTP。",
-      "release_note": "2.2.0-3：按審核意見整改——隱私聲明與描述改為真實流量（tracker、DHT、peer 交換、版本檢查）並補齊第三方端點表；許可更正為 GPL-3.0-or-later 及 OpenSSL 例外並重寫 NOTICE；補全 README 與倉庫目錄；基礎鏡像升級到 linuxserver/deluge:2.2.0-ls387（對應 CVE 報告）；aarch64 包重新建置並核實 platform=aarch64。"
+      "descript": "Deluge 是 BitTorrent 用戶端，守護程式在容器內執行，透過 8020 連接埠的 Deluge Web 介面操作。預設密碼為 deluge，請首次登入後立即修改。在 Web 介面可新增種子檔案、磁力鏈與下載位址，查看下載與做種進度並設定限速。設定與斷點續傳資料儲存在 DockerAppData/delugedocker/config，下載內容儲存在 downloads。應用只發布 Web 連接埠，入站 peer 需要在路由器上轉送連接埠。開發者不收集任何遙測資料。",
+      "important": "預設 Web 密碼為 deluge，請首次登入後立即修改。本包只發布 8020 連接埠（Web 介面）。入站 peer 連線需要在路由器上轉送監聽連接埠，出站連線不受影響。你新增的每個任務都會把公網 IP 暴露給對應的 tracker、DHT 節點與 peer，本包不含 VPN。資料位於 DockerAppData/delugedocker。頁面是區域網路明文 HTTP，暴露到公網前請使用 TLS 反向代理。",
+      "release_note": "2.2.0-4：按審核意見整改。F2 修復：/run 預掛載為 uid 1000 的 tmpfs，s6-overlay 不再以退出碼 100 中斷啟動。C9 修復：lang 不再使用 ASCII 分號（商店解析器會當作註解截斷描述），文案只描述真實交付的功能。P2 修復：help 指向可渲染的說明頁。S11 修復：umask 027 且 /config 僅屬主可讀。T1 修復：基礎鏡像升級到 ls388。"
     }
   },
   "data_notes": "`config` holds the daemon and web settings (auth, core.conf, torrents.state, plugins); `downloads` holds the torrent payload and is the default save path. Copying `config` keeps the client configuration; `downloads` is your own data.",
   "design_notes": [
-    "**Runs as a non-root container.** uid/gid 1000, `cap_drop: [ALL]` and `no-new-privileges`; `CapEff=0000000000000000` measured inside the running container.",
+    "**Runs as a non-root container.** uid/gid 1000, `cap_drop: [ALL]` and `no-new-privileges`; `CapEff=0000000000000000` measured inside the running container. The entrypoint wrapper sets `umask 027`, keeps `/config` owner-only (0700 dirs, 0600 files, the credential hash is 0600) and `/downloads` group-readable (0750) so nothing is world writable.",
     "**Two volumes.** `/config` keeps the daemon/web settings; `/downloads` receives the torrent data.",
     "**Health check** probes the web UI on container port 8112 (curl ships with the image).",
-    "**Fixed image tag, never `:latest`**, Docker Hub only, no `privileged`, no `network_mode: host`, no Docker socket, no `cap_add`.",
-    "**No telemetry to the developer.** The only traffic is the BitTorrent traffic your own torrents generate, plus the daemon's optional release check (settings -> Other)."
+    "**Fixed image tag pinned by digest**, Docker Hub only (ls388, build date 2026-11-24), no `privileged`, no `network_mode: host`, no Docker socket, no `cap_add`.",
+    "**No telemetry to the developer.** The only traffic is the BitTorrent traffic your own torrents generate, plus the daemon's optional release check (settings -> Other).",
+    "**`/run` is a tmpfs owned by uid 1000** so s6-overlay starts even when the install-time `/run` has another owner. Without it the image's preinit aborts with exit code 100 and the container restarts in a loop (the start-up failure seen on 2.2.0-3)."
   ],
   "limitations": [
-    "Only the web UI port is published. Incoming peer connections need UPnP/NAT-PMP or router port forwarding; outgoing connections still download.",
+    "Only the web UI port (8020) is published. The container uses bridge networking, so the daemon's UPnP/NAT-PMP request cannot open a port on your router. Incoming peer connections therefore need a listen port forwarded manually on the router. Outgoing connections, trackers and DHT still work without it.",
     "Adding a torrent announces it to that torrent's trackers and to the DHT, so your public IP, client port and up/download counters become visible to those third parties. LSD (local peer discovery) also broadcasts on the LAN. There is no anonymity layer of any kind.",
     "No VPN is included. Pair it with a VPN tunnel or a trusted network if your torrent traffic must not be attributable to your line.",
     "The page is plain HTTP on the LAN and ships with the upstream default password `deluge`; change it on first login and use a TLS reverse proxy before exposing the UI to the internet.",
@@ -91,7 +92,7 @@
       "lifecycle": "rewritten on every settings change"
     },
     {
-      "path": "config/torrents.state, config/torrents.fastresume",
+      "path": "config/state/torrents.state, config/state/torrents.fastresume",
       "purpose": "torrent list, labels/queue order and resume data for the torrents you add",
       "created": "when the first torrent is added",
       "growth": "grows with the number of torrents",
@@ -99,7 +100,7 @@
     },
     {
       "path": "config/hostlist.conf",
-      "purpose": "web UI allow-list for the reverse-proxy header",
+      "purpose": "web UI allow-list and local daemon entry (host id, 127.0.0.1:58846)",
       "created": "first start",
       "growth": "small",
       "lifecycle": "rewritten when the allow-list changes"

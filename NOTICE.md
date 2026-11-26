@@ -52,18 +52,18 @@ So the correct statement is **GPL-3.0-or-later, with the OpenSSL linking excepti
   (`/lsiopy/lib/python3.12/site-packages/deluge-2.2.0.dist-info/LICENSE`); we do not
   relicense or modify Deluge.
 
-## 2. Container image — `linuxserver/deluge:2.2.0-ls387`
+## 2. Container image — `linuxserver/deluge:2.2.0-ls388`
 
 | | |
 |---|---|
-| Registry | Docker Hub, `linuxserver/deluge:2.2.0-ls387` (used unmodified, tag pinned) |
+| Registry | Docker Hub, `linuxserver/deluge:2.2.0-ls388` (used unmodified, tag **and index digest** pinned in the compose file) |
 | Maintainer | LinuxServer.io — <https://github.com/linuxserver/docker-deluge> (GPL-3.0) |
 | Image label licence | `GPL-3.0-only` (LinuxServer.io's own label; see the note in §1) |
-| OCI image index | `sha256:e2a537991884a514b64d7adf857e39b5e9239a1c76e52114e52bf10707dde772` |
-| `linux/amd64` manifest | `sha256:bd74af6a1e88f7ee6061dba04a048f426d613ec7d04b8b75222ccb193df2b9c9` |
-| `linux/arm64` manifest | `sha256:2a63fea7dae7f5d005937fb5b1bd13a1db4ebd85216c9b6db586602c9854b832` |
+| OCI image index | `sha256:52314116ba684ae5cdcbd380758be2a5f7cc866b4235f44ba7af8ff7c35c42b7` (build date 2026-11-24) |
+| `linux/amd64` manifest | `sha256:7dc700659710cb84c2ec1b837a1bf370cd120b814950e0aac8f51a72746f94c8` |
+| `linux/arm64` manifest | `sha256:749f3cd33e015b6614e10fbc7ce1729e16cff9d621190c1f6826456f01fe1772` |
 | Platforms | x86_64 (amd64) and aarch64 (arm64) — both manifests verified while preparing this release |
-| Previous image | `linuxserver/deluge:2.2.0-ls386` (shipped in `2.2.0-2`) — superseded by ls387 for the CVE remediation (finding T1) |
+| Previous images | `2.2.0-ls387` (shipped in `2.2.0-3`), `2.2.0-ls386` (shipped in `2.2.0-2`) — both superseded by ls388 for the CVE remediation (finding T1, re-checked for `2.2.0-4`) |
 
 The image is **pulled from Docker Hub at install time and is not redistributed** in this
 package. The digests above are content-addressed identifiers, recorded so that a rebuilt

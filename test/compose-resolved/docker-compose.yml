@@ -1,12 +1,12 @@
 # ===========================================================================
 # Deluge for TerraMaster TOS 7 (Docker application)
 # ===========================================================================
-# Upstream image : linuxserver/deluge:2.2.0-ls387 (Docker Hub, used unmodified)
+# Upstream image : linuxserver/deluge:2.2.0-ls388 (Docker Hub, used unmodified)
 #                  -> https://github.com/linuxserver/docker-deluge
-#                  OCI index sha256:e2a537991884a514b64d7adf857e39b5e9239a1c76e52114e52bf10707dde772
-#                  platforms: linux/amd64 + linux/arm64
-#                  (ls386, shipped in 2.2.0-2, is superseded by ls387: the base
-#                   rebuild that answers finding T1)
+#                  OCI index sha256:52314116ba684ae5cdcbd380758be2a5f7cc866b4235f44ba7af8ff7c35c42b7
+#                  build date 2026-11-24, platforms linux/amd64 + linux/arm64
+#                  (ls387, shipped in 2.2.0-3, is superseded by ls388: the newer
+#                   base rebuild that answers finding T1)
 #
 # Ports   : host 8020 -> container 8112. The host port is in the
 #           TOS-recommended 8000-19999 range and is not one of the reserved
@@ -16,18 +16,31 @@
 # Volumes : all persistent data lives below
 #           /Volume1/DockerAppData/delugedocker/. The /Volume* wildcard is
 #           deliberately NOT used: the platform does not expand it.
-# TOS rules honoured: Docker Hub image with a fixed tag (never ':latest'),
-#           container_name == application id, restart: unless-stopped,
-#           non-root user, no privileged mode, no network_mode: host, no
-#           cap_add, explicit TZ, a healthcheck on the only service, and
-#           x-app-meta as the last block.
-# Hardening: uid/gid 1000 with every Linux capability dropped (CapEff =
-#           0000000000000000, measured inside the running container) plus
-#           no-new-privileges, so a setuid helper inside the image cannot
-#           regain root either. Deluge needs no capability: it writes only
-#           /config and /downloads and does TCP/UDP as an unprivileged user.
+# TOS rules honoured: Docker Hub image with a fixed tag and digest (never
+#           ':latest'), container_name == application id,
+#           restart: unless-stopped, non-root user, every Linux capability
+#           dropped, no-new-privileges, no privileged mode, no
+#           network_mode: host, no cap_add, explicit TZ, a healthcheck on the
+#           only service, and x-app-meta as the last block.
+# Hardening: uid/gid 1000 with cap_drop: [ALL] (CapEff = 0000000000000000,
+#           measured inside the running container) plus no-new-privileges, so a
+#           setuid helper inside the image cannot regain root either. Deluge
+#           needs no capability: it writes only /config and /downloads and does
+#           TCP/UDP as an unprivileged user. The entrypoint wrapper sets
+#           umask 027 and tightens /config, so the credential file stays 0600
+#           and the config tree is not group/world readable (finding S11).
 # Escaping: docker compose interpolates ${VAR}/$VAR in compose files, so any
 #           '$' meant for the shell is written '$$'.
+#
+# tmpfs   : s6-overlay aborts with exit code 100 before the app starts when
+#           /run does not belong to the uid the container runs as and it lacks
+#           the privileges to chown it ("preinit: fatal: /run belongs to uid X
+#           instead of Y"). That was finding F2 on 2.2.0-3. The image's own
+#           /run is created with uid 1000 at build time and an install-time
+#           /run can have a different owner, so /run is now pre-mounted as a
+#           tmpfs owned by uid/gid 1000 with exec (s6 runs its init from /run).
+#           Deluge keeps its socket temp dir in /run/deluged-temp, which the
+#           image's init creates there.
 #
 # NOTE for maintainers: never place a comment line directly in front of a
 # "- value" sequence item (ports, volumes, ...). The official
@@ -37,20 +50,65 @@
 
 services:
   delugedocker:
-    image: linuxserver/deluge:2.2.0-ls387
+    image: linuxserver/deluge:2.2.0-ls388@sha256:52314116ba684ae5cdcbd380758be2a5f7cc866b4235f44ba7af8ff7c35c42b7
     container_name: delugedocker
     restart: unless-stopped
     user: "1000:1000"
+    cap_drop:
+      - ALL
+    security_opt:
+      - "no-new-privileges:true"
+    tmpfs:
+      - /run:rw,exec,nosuid,nodev,mode=0755,uid=1000,gid=1000
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        #!/bin/sh
+        # ===========================================================================
+        # Entrypoint wrapper for the LinuxServer.io Deluge image.
+        #
+        # The image is used unmodified, this wrapper only runs before /init:
+        #
+        #   1. umask 027 - every file Deluge writes (config, resume data, log, torrent
+        #      payload) is created without group/world write access instead of the
+        #      image's default 022 (finding S11).
+        #   2. /run is a tmpfs owned by uid 1000 (see docker-compose.yml). Recreate the
+        #      socket temp dir the image expects there, with owner-only access.
+        #   3. Tighten /config: it holds the Web UI credential hash (config/auth) and
+        #      the daemon settings, so the tree is set to owner-only (0700 dirs, 0600
+        #      files). Only files this uid owns are changed; a root-owned entry left by
+        #      the platform is skipped instead of aborting the start-up.
+        #   4. /downloads is the user's payload and stays readable by the group, so a
+        #      shared download folder keeps working while nothing is world writable.
+        #
+        # The script must not contain a literal double dollar sign (the packaging step
+        # uses it as the escape sequence) and is executed as uid 1000, never as root.
+        # ===========================================================================
+        set -u
+
+        umask 027
+
+        if [ -d /run ]; then
+            mkdir -p /run/deluged-temp 2>/dev/null || true
+            chmod 0700 /run/deluged-temp 2>/dev/null || true
+        fi
+
+        if [ -d /config ]; then
+            find /config -xdev -exec chmod go-rwx {} + 2>/dev/null || true
+            chmod 0700 /config 2>/dev/null || true
+        fi
+
+        if [ -d /downloads ]; then
+            chmod 0750 /downloads 2>/dev/null || true
+        fi
+
+        exec /init
     ports:
       - "8020:8112"
     environment:
       TZ: "Asia/Shanghai"
       HOME: "/config"
       DELUGE_LOGLEVEL: "error"
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
     volumes:
       - /Volume1/DockerAppData/delugedocker/config:/config
       - /Volume1/DockerAppData/delugedocker/downloads:/downloads

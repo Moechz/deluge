@@ -77,9 +77,9 @@ not by the packaging. This table is the complete list as implemented in the vers
 | 6 | Container start, then every **3 days** (default **on**) | `https://ftp.osuosl.org/pub/deluge/version-2.0` — “check for new release” | source IP + HTTP user agent only; the file is the current version string | OSU Open Source Lab, Oregon, US |
 | 7 | Only if you enable “send anonymous stats” (default **off**) | `http://deluge-torrent.org/stats_get.php?processor=<arch>&python=<ver>&deluge=<ver>` at most weekly | CPU architecture, Python version, Deluge version, source IP | deluge-torrent.org, US/EU |
 | 8 | Only if you press “Test active port” in the UI | `https://deluge-torrent.org/test_port.php?port=<listen port>` | your listening port (and therefore your IP) | deluge-torrent.org, US/EU |
-| 9 | Port mapping (default **on**) | your own router/gateway via **UPnP-IGD / NAT-PMP** (`:1900`, `:5351`, gateway IP) | requested port mapping for the listen port | your LAN router only |
+| 9 | Port mapping (default **on**) | **UPnP-IGD / NAT-PMP** (`:1900`, `:5351`) toward the container's gateway. With the bridge network used by this package the gateway is Docker's bridge, so the request does not reach your router — the daemon still tries | requested port mapping for the listen port | Docker's bridge gateway (no internet) |
 | 10 | Only if you enable the **Blocklist** plugin | the blocklist URL **you** configure | source IP + user agent | the URL you chose |
-| 11 | Installing / updating the app | `registry-1.docker.io` (Docker Hub) or your configured mirror | anonymous image pull of `linuxserver/deluge:2.2.0-ls387` | Docker Hub, US, or your mirror |
+| 11 | Installing / updating the app | `registry-1.docker.io` (Docker Hub) or your configured mirror | anonymous image pull of `linuxserver/deluge:2.2.0-ls388` | Docker Hub, US, or your mirror |
 | 12 | Any of the above that uses a hostname | your configured **DNS resolver** | the hostname being resolved | your DNS provider |
 
 No other endpoint is contacted. In particular: no analytics, no crash reporting, no advertising
@@ -109,15 +109,18 @@ children's data.
   (`cap_drop: [ALL]`, `CapEff=0000000000000000` measured in the running container) and
   `no-new-privileges`; it has no `privileged`, no host network, no Docker socket and no
   `cap_add`.
-- Only the web port is published (`8020 → 8112`); the BitTorrent listen port stays inside the
-  container network and is reached through UPnP/NAT-PMP or a router forward.
-- The image tag is pinned (`linuxserver/deluge:2.2.0-ls387`) and the package is rebuilt when
-  upstream ships a security fix; no `:latest`.
+- Only the web port is published (`8020 → 8112`). The BitTorrent listen port stays inside the
+  container network: the daemon's UPnP/NAT-PMP request goes to Docker's bridge gateway, so
+  incoming peers need a listen port forwarded manually on the router.
+- The image tag **and digest** are pinned (`linuxserver/deluge:2.2.0-ls388@sha256:52314116…`)
+  and the package is rebuilt when upstream ships a security fix; no `:latest`.
 - The web UI ships the upstream default password `deluge`; **change it on first login**. The
   password is stored in `config/auth` as a salted hash.
 - The UI is plain HTTP on the LAN. Put a TLS reverse proxy in front of it before exposing it
   to the internet, and restrict who can reach port 8020.
-- Data files stay inside the app data folder and are owned by uid 1000.
+- Data files stay inside the app data folder and are owned by uid 1000. The entrypoint
+  wrapper runs with `umask 027`, keeps `/config` owner-only (0700/0600, `config/auth` is 0600)
+  and `/downloads` group-readable (0750), so credentials are not readable by other users.
 
 ## 9. Scope
 

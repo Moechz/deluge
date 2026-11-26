@@ -2,6 +2,82 @@
 
 All notable user-visible changes to the Deluge TOS application package.
 
+## 2.2.0-4 — 2026-11-26
+
+Remediation of the App Listing Review on **`2.2.0-3`** (x86_64 and aarch64 both on hold).
+Review codes: **C9, T1** in the mail summary; the review tables additionally listed **P2, F2,
+S11** (x86_64) and **P2, F2, F7** (aarch64). All of them are blocking rows, so all were fixed.
+Submission remarks: “Rectified per review comments”.
+
+### Why `2.2.0-3` still failed (root cause, not a wording retry)
+
+- **F2 — the container really did not start.** The only place in this image that exits with
+  **code 100** is s6-overlay's preinit, and it does so when `/run` is not owned by the uid the
+  container runs as:
+  `preinit: fatal: /run belongs to uid X instead of Y, has insecure and/or unworkable
+  permissions, and we're lacking the privileges to fix it`. With `cap_drop: [ALL]` (added in
+  `2.2.0-3`) the process cannot chown `/run` either, so preinit aborts, the container exits
+  `100`, and `restart: unless-stopped` loops it — exactly what the review reports. Reproduced
+  locally with the same compose file, same image and a uid other than the owner of `/run`
+  (`exit=100`, s6 preinit message above). `2.2.0-3` never mounted its own `/run`, so the start-up
+  depended on how the install environment creates it. `2.2.0-4` pre-mounts it as a tmpfs owned
+  by uid/gid 1000 (`tmpfs: /run:rw,exec,nosuid,nodev,mode=0755,uid=1000,gid=1000`), the same
+  pattern already shipped in the published `qbittorrentdocker` package.
+- **C9 — the description was cut by the store parser, not merely inaccurate.** `app.lang`
+  contained **65 ASCII semicolons**, including inside every `descript` value
+  (`… as a non-root container; settings and downloads stay …`). The platform parses `.lang`
+  as INI, so `;` starts a comment: the description shown in the listing ended at the first
+  semicolon and the rest of the sentence was dropped. `2.2.0-4` rewrites every value without
+  ASCII semicolons (full-width “；” or a rewritten sentence) and `tools/verify.py` now **fails
+  the build** if a lang value contains one. The text itself was also re-checked against the
+  delivered behaviour and one claim was dropped: in bridge networking the daemon's UPnP request
+  goes to Docker's gateway, so it cannot open a router port — the description no longer implies
+  that incoming peers work through UPnP.
+- **P2 — help URL was a source-browsing page.** `help` pointed at
+  `https://github.com/Moechz/deluge/blob/main/PRIVACY.md`, i.e. raw source on a code host.
+  It now points at the rendered help page **<https://moechz.github.io/deluge/>** (GitHub Pages
+  built from `docs/`, public, no sign-in). `config.ini` and `tosapp.json` carry the same URL.
+- **S11 — file permissions.** The entrypoint wrapper now sets `umask 027`, tightens `/config` to
+  0700/0600 (`config/auth` was already 0600) and keeps `/downloads` at 0750, so nothing in the
+  data folder is group- or world-writable. The container still runs as uid/gid 1000 with
+  `cap_drop: [ALL]` and `no-new-privileges`.
+- **F7 — web interface.** A consequence of F2 on aarch64 (the container never reached a running
+  state). Verified this round with a real functional probe, not just a port check:
+  `test/smoke.sh` loads the Web UI, proves a wrong password is rejected, logs in, connects the
+  Web UI to the daemon and adds + lists + removes a torrent.
+- **T1 — a newer base build exists this time.** LinuxServer.io published
+  **`2.2.0-ls388`** (build date 2026-11-24) after the `ls387` used in `2.2.0-3`
+  (2026-11-09). The image is bumped to ls388, **pinned by index digest**
+  `sha256:52314116ba684ae5cdcbd380758be2a5f7cc866b4235f44ba7af8ff7c35c42b7`
+  (amd64 `7dc70065…`, arm64 `749f3cd3…`).
+
+### Changed
+
+- `src/docker-compose.yml`: image → `linuxserver/deluge:2.2.0-ls388@sha256:52314116…`;
+  `tmpfs: /run` (uid/gid 1000, exec) to fix the exit-100 start-up; entrypoint wrapper;
+  port **8020:8112 unchanged** (RUNBOOK §12).
+- `src/entrypoint.sh` (new): `umask 027`, recreates `/run/deluged-temp`, owner-only `/config`,
+  group-readable `/downloads`, then `exec /init`.
+- `src/delugedocker.lang`, `tosapp.json`: description/important/release_note rewritten without
+  ASCII semicolons, aligned with the delivered features; `help` → the rendered help page;
+  `translations` zh-cn/zh-hk updated; `design_notes`/`limitations`/`runtime_files` corrected
+  (`config/state/…`, tmpfs `/run`, bridge-networking peer limitation).
+- `tools/verify.py`: new hard gate — an ASCII semicolon in any lang value fails the build (C9).
+- `test/smoke.sh` (new): Web UI + login + add/query/remove task, exit code non-zero on failure.
+- `docs/index.md` (new): the rendered help page served by GitHub Pages.
+- `README.md`, `NOTICE.md`, `PRIVACY.md`, `CHANGELOG.md`: image/digest refresh, remediation
+  table for this round, smoke-test and permission notes.
+
+### Verified
+
+- `scripts/build-dual.sh 2.2.0-4` → `verify OK` for both architectures; official
+  `TOSAppSelfTestingTool -c` passes on both archives.
+- Isolated staging: container running/healthy, HTTP 200, `user=1000:1000`,
+  `/config` 0700, `config/auth` 0600.
+- `test/smoke.sh` against the staged instance: 8/8 checks OK (page, wrong-password rejection,
+  login, daemon connect, version, add task, list task, cleanup).
+- Checksums are recorded in README §11 and in the `out/*.sha256` files of the release.
+
 ## 2.2.0-3 — 2026-11-22
 
 Remediation of the App Listing Review on `2.2.0-2` (x86_64 and aarch64 were both on hold).

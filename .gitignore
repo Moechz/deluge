@@ -8,7 +8,9 @@
 # --- internal project documents: kept locally, never published ---
 AGENTS.md
 HANDOFF.md
-/docs/
+# NOTE: docs/ is deliberately NOT ignored. docs/index.md is the rendered help
+# page published by GitHub Pages (https://moechz.github.io/deluge/), which is
+# the `help` URL of the package (finding P2).
 
 # --- local packaging toolkit copy and spec (never published) ---
 /.toolkit/

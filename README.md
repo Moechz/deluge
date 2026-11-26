@@ -4,8 +4,8 @@
 > [Deluge](https://github.com/deluge-torrent/deluge) 2.2.0, run from the
 > unmodified [LinuxServer.io image](https://github.com/linuxserver/docker-deluge).
 
-Current packaging version: **`2.2.0-3`** (remediated per App Listing Review, see
-[§9](#9-review-remediation-220-3)).
+Current packaging version: **`2.2.0-4`** (remediated per App Listing Review, see
+[§9](#9-review-remediation)).
 
 ## 1. What this is
 
@@ -14,13 +14,14 @@ Center:
 
 | File | Role |
 |---|---|
-| `config.ini` | TOS application metadata (`application_type: docker`, id `delugedocker`, `path` → port 8020, `help` → this repo's privacy policy) |
+| `config.ini` | TOS application metadata (`application_type: docker`, id `delugedocker`, `path` → port 8020, `help` → <https://moechz.github.io/deluge/>, the rendered help page) |
 | `delugedocker.lang` | 23-language metadata superset (TOS requires 14) |
 | `delugedocker.svg` | application icon (744 bytes, 4 SVG elements, 512×512 viewBox) |
-| `docker-compose.yml` | one service running `linuxserver/deluge:2.2.0-ls387`, non-root, hardened, port `8020:8112` |
+| `docker-compose.yml` | one service running `linuxserver/deluge:2.2.0-ls388` (digest-pinned), non-root, hardened, `tmpfs` `/run`, port `8020:8112` |
 
 The archive contains no binaries and no upstream source code: the container image is pulled
-from Docker Hub at install time.
+from Docker Hub at install time. The archive ships the entrypoint wrapper inline in the compose
+file (see `src/entrypoint.sh`).
 
 ## 2. Repository layout
 
@@ -33,17 +34,21 @@ from Docker Hub at install time.
 ├── LICENSE                       MIT licence of *this packaging* (not of Deluge)
 ├── tosapp.json                   packaging spec read by scripts/ and tools/
 ├── TOSAppSelfTestingTool         official TOS package checker (binary, run with -c)
-├── src/                          the four files that go into the archive
+├── docs/
+│   └── index.md                  rendered help page published by GitHub Pages (help URL)
+├── src/                          the four files that go into the archive (+ wrapper source)
 │   ├── config.ini
 │   ├── delugedocker.lang
 │   ├── delugedocker.svg
-│   └── docker-compose.yml
+│   ├── docker-compose.yml
+│   └── entrypoint.sh             umask/permission wrapper, embedded into the compose file
 ├── scripts/
 │   ├── build.sh                  build one architecture → out/<appid>.tar.gz
 │   └── build-dual.sh             build x86_64 + aarch64, verify both, write .sha256
 ├── tools/
 │   └── verify.py                 review-standards self-check (hard build gate)
 └── test/
+    ├── smoke.sh                  functional smoke test (Web UI + login + add/query task)
     └── install-and-verify.sh     on-device E2E (needs root; not needed for review)
 ```
 
@@ -54,10 +59,12 @@ artefacts live in GitHub Releases, not in the tree.
 
 | | |
 |---|---|
-| Container image | `linuxserver/deluge:2.2.0-ls387` (Docker Hub, unmodified, tag pinned) |
-| Image index digest | `sha256:e2a537991884a514b64d7adf857e39b5e9239a1c76e52114e52bf10707dde772` (amd64 + arm64) |
+| Container image | `linuxserver/deluge:2.2.0-ls388` (Docker Hub, unmodified, tag **and digest** pinned) |
+| Image index digest | `sha256:52314116ba684ae5cdcbd380758be2a5f7cc866b4235f44ba7af8ff7c35c42b7` (amd64 `7dc70065…`, arm64 `749f3cd3…`) |
 | Open | `http://<NAS-IP>:8020/` → container port 8112 |
 | Runs as | uid/gid `1000:1000`, `cap_drop: [ALL]`, `no-new-privileges`, `CapEff=0` |
+| `/run` | tmpfs owned by uid/gid 1000 (s6-overlay aborts with exit code 100 if it cannot own `/run`) |
+| Entrypoint | `src/entrypoint.sh` → `umask 027`, owner-only `/config`, then `exec /init` |
 | Persistent data | `/config` → `/Volume1/DockerAppData/delugedocker/config`<br>`/downloads` → `/Volume1/DockerAppData/delugedocker/downloads` |
 | Health check | `curl -s -o /dev/null http://127.0.0.1:8112/` every 30 s (curl ships in the image) |
 | Logs | `docker logs delugedocker` (level from `DELUGE_LOGLEVEL=error`) |
@@ -68,7 +75,7 @@ artefacts live in GitHub Releases, not in the tree.
 | Direction | Port | Notes |
 |---|---|---|
 | Web UI (published) | host `8020` → container `8112/tcp` | the only published port; unchanged since `2.2.0-1` |
-| BitTorrent listen (not published) | container `6881–6891` (random) | inbound peers arrive through UPnP/NAT-PMP or a router forward; outgoing connections work regardless |
+| BitTorrent listen (not published) | container `6881–6891` (random) | inbound peers need a listen port forwarded on your router. The container is on a bridge network, so the daemon's UPnP/NAT-PMP request reaches Docker's gateway, not the router. Outgoing connections work regardless |
 | Daemon RPC (not published) | container `58846/tcp` | used only inside the container |
 
 The host port stays inside TOS' recommended `8000–19999` range and avoids the reserved ports
@@ -80,8 +87,8 @@ The host port stays inside TOS' recommended `8000–19999` range and avoids the 
 |---|---|
 | `config/auth` | web/daemon credentials (salted hash) |
 | `config/core.conf` | preferences: listen ports, limits, DHT/UPnP/encryption switches, proxy |
-| `config/torrents.state`, `config/torrents.fastresume` | torrent list, queue and resume data |
-| `config/hostlist.conf` | web UI allow-list |
+| `config/state/torrents.state`, `config/state/torrents.fastresume` | torrent list, queue and resume data |
+| `config/hostlist.conf`, `config/web.conf` | web UI allow-list and local daemon entry / web UI settings |
 | `config/plugins/` | state of enabled plugins |
 | `config/deluged.log` | daemon log |
 | `downloads/` | the torrent payload (default save path) |
@@ -124,7 +131,7 @@ how to switch each one off.
 | Component | Licence |
 |---|---|
 | Deluge 2.2.0 (inside the image) | **GPL-3.0-or-later with the OpenSSL linking exception** — verified from the image's `deluge-2.2.0.dist-info/METADATA` (`GPLv3+`) and `LICENSE` |
-| Image `linuxserver/deluge:2.2.0-ls387` | LinuxServer.io build, GPL-3.0; the image label says `GPL-3.0-only` (see NOTICE §1) |
+| Image `linuxserver/deluge:2.2.0-ls388` | LinuxServer.io build, GPL-3.0; the image label says `GPL-3.0-only` (see NOTICE §1) |
 | This packaging (compose, metadata, translations, docs, scripts) | **MIT** (see `LICENSE`) — no upstream code is included |
 
 “Deluge”, “LinuxServer.io”, “TerraMaster” and “TOS” are trademarks of their respective
@@ -132,7 +139,24 @@ owners and are used descriptively only. This is an independent community package
 is not affiliated with or endorsed by the Deluge project, LinuxServer.io or TerraMaster.
 Full attributions, image digests and the licence-correction note: **[NOTICE.md](NOTICE.md)**.
 
-## 9. Review remediation (`2.2.0-3`)
+## 9. Review remediation
+
+### 9.1 `2.2.0-4` (review of `2.2.0-3`)
+
+Review of `2.2.0-3` (x86_64 + aarch64) listed **C9, T1** in the summary and, in the review
+tables, the blocking rows **P2, F2, S11** (x86_64) and **P2, F2, F7** (aarch64). This round
+looked at what `2.2.0-3` actually delivered instead of re-stating the old conclusions:
+
+| Finding | What `2.2.0-3` did | Fix in `2.2.0-4` |
+|---|---|---|
+| **F2** service fails to start, container exits `100` | Added `cap_drop: [ALL]` but never mounted its own `/run`; s6-overlay's preinit exits `100` when `/run` is owned by a different uid and it cannot chown it (reproduced locally with the same compose file and image: `exit=100`) | `tmpfs: /run` owned by uid/gid 1000 with `exec`, so the start-up no longer depends on the install-time `/run` |
+| **C9** description inconsistent | Rewrote the wording, but kept **65 ASCII semicolons** in `app.lang`; the store parses `.lang` as INI, so every `descript` was cut at the first `;` | All values rewritten without ASCII semicolons; `tools/verify.py` now fails the build if a lang value contains one; the UPnP claim was dropped (bridge networking cannot open a router port) |
+| **P2** help link | Pointed at `blob/main/PRIVACY.md` (raw source on a code host) | `help` → <https://moechz.github.io/deluge/>, rendered from `docs/`, public, no sign-in |
+| **S11** file permissions | Non-root, but `/config`/`/downloads` kept the platform's default modes | `umask 027`, `/config` 0700 (files 0600), `/downloads` 0750 via `src/entrypoint.sh` |
+| **F7** web interface | Never started on aarch64 because of F2 | Same F2 fix; verified with `test/smoke.sh`: page loads, wrong password rejected, login, daemon connect, add/list/remove a torrent |
+| **T1** CVE | Bumped to `ls387` (2026-11-09) | LinuxServer.io has since published **`2.2.0-ls388`** (2026-11-24), now pinned by index digest `sha256:52314116…` |
+
+### 9.2 `2.2.0-3` (review of `2.2.0-2`)
 
 Review of `2.2.0-2` (x86_64 + aarch64) raised the union of `C10 C2 C6 C8 T1` plus the
 blocking rows printed in the aarch64 notice. What changed:
@@ -152,10 +176,10 @@ blocking rows printed in the aarch64 notice. What changed:
 
 ```bash
 # both architectures -> out/delugedocker_{x86_64,aarch64}.tar.gz + .sha256
-scripts/build-dual.sh 2.2.0-3
+scripts/build-dual.sh 2.2.0-4
 
 # single architecture
-scripts/build.sh 2.2.0-3 x86_64
+scripts/build.sh 2.2.0-4 x86_64
 ```
 
 `scripts/build.sh` stages the four files, substitutes `@@VERSION@@`/`@@PLATFORM@@`, strips
@@ -177,20 +201,23 @@ Isolated runtime check (temporary ports, `/tmp` data, never the production folde
 
 ```bash
 python3 ../stage.py . --timeout 300     # isolated compose up + HTTP + non-root assertions
+bash test/smoke.sh http://127.0.0.1:<staged-port>   # functional: login + add/query task
+python3 ../smoke.py . --timeout 300     # generic availability gate, runs test/smoke.sh
 ```
 
-## 11. Architectures and checksums (`2.2.0-3`)
+## 11. Architectures and checksums (`2.2.0-4`)
 
 | Architecture | Package | Size | SHA-256 |
 |---|---|---|---|
-| x86_64 | `delugedocker_x86_64.tar.gz` | 5408 B | `e54da649189c1f9b01d4e631c68e9f9a0c78192e4285c33a73d572f40457e0e6` |
-| aarch64 | `delugedocker_aarch64.tar.gz` | 5404 B | `37d2a0164da056a1f05c704dd78b67daa3f4c281fb3732d8dacd22bafd2ea0ce` |
+| x86_64 | `delugedocker_x86_64.tar.gz` | 6553 B | `c091d7ccae30be43d13fbf6ebc19b239943863635efa59c1a7993dfb13e89c07` |
+| aarch64 | `delugedocker_aarch64.tar.gz` | 6554 B | `64cdf594a7d7e32d1215e99dde5c32dcc905549dd9203c291b78dbb2421b80fa` |
 
 Both archives were built from the same sources by `scripts/build-dual.sh` and pass the official
 `TOSAppSelfTestingTool -c` check. x86_64 was additionally started in an isolated staging
-project (container healthy, HTTP 200, uid 1000). **No ARM host was available**, so the aarch64
+project (container running/healthy, HTTP 200, uid 1000, `/config` 0700, `config/auth` 0600,
+`test/smoke.sh` 8/8 checks OK). **No ARM host was available**, so the aarch64
 archive is verified statically (declared `platform=aarch64`, image provides
-`linux/arm64` manifest `sha256:2a63fea7…`) rather than by running it.
+`linux/arm64` manifest `sha256:749f3cd3…`) rather than by running it.
 
 ## 12. Security notes
 
@@ -204,10 +231,10 @@ archive is verified statically (declared `platform=aarch64`, image provides
 
 ## 13. Store submission
 
-1. Public GitHub repo (this tree) with tag `v2.2.0-3`.
+1. Public GitHub repo (this tree) with tag `v2.2.0-4`.
 2. Release assets: `delugedocker_x86_64.tar.gz`, `delugedocker_aarch64.tar.gz` and both
    `.sha256` files.
-3. Developer platform → Deluge → new version `2.2.0-3` for **x86_64 and aarch64**; submission
+3. Developer platform → Deluge → new version `2.2.0-4` for **x86_64 and aarch64**; submission
    remarks: “Rectified per review comments”.
 4. After submission, compare the platform `file_hash` with the local `sha256sum` (V7/S12).
 

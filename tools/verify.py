@@ -85,7 +85,18 @@ chk(cfg_port == int(spec["host_port"]),
 _cfg_noversion = {k: v for k, v in cfg.items() if k not in ("version", "low_version")}
 chk(not re.search(r"\d+\.\d+\.\d+\.\d+", json.dumps(_cfg_noversion, ensure_ascii=False)),
     "config.ini must not contain a hardcoded IP")
-for key in ("help", "official", "Official"):
+# P2: help must be a rendered, publicly reachable help document. A
+# github.com/<owner>/<repo>/blob|tree|raw/... URL is a source-browsing page and
+# was rejected by the reviewer on 2.2.0-3, so it fails the build now.
+_h = cfg.get("help")
+if _h:
+    chk(_h.startswith("https://"), "help must be an https URL")
+    chk(re.search(r"^https?://(localhost|127\.|0\.0\.0\.0|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)",
+                  _h) is None, "help must not point at a private or loopback address")
+    chk("file:" not in _h and not _h.startswith("/"), "help must not be a file: URL or a path")
+    chk(re.search(r"github\.com/[^/]+/[^/]+/(blob|tree|raw)/", _h) is None,
+        "help must not point at a source-browsing page (P2): use a rendered help page")
+for key in ("official", "Official"):
     v = cfg.get(key)
     if v:
         chk(v.startswith("https://github.com/"),
@@ -110,6 +121,13 @@ for s in secs:
     i = re.search(r'important\s*=\s*"(.+)"', body)
     chk(i is None or len(i.group(1)) <= 512, f"[{s}] important longer than 512 chars")
     chk(f'version      = "{ver}"' in body, f"[{s}] version != {ver}")
+    # C9: the store parser treats an ASCII semicolon as an INI comment, so a
+    # value that contains one is cut at that point and the description that
+    # reaches the listing is truncated (seen on 2.2.0-3). Comments are exempt.
+    for line in body.splitlines():
+        if line.lstrip().startswith("#"):
+            continue
+        chk(";" not in line, f"[{s}] ASCII semicolon in a lang value: {line.strip()[:70]}")
 chk(re.search(r"\bbeta\b", lang, re.I) is None, "lang must not contain the word 'beta' (V11)")
 
 # ---- svg icon ---------------------------------------------------------------
